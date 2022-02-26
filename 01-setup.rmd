@@ -1,0 +1,118 @@
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(stringr)
+
+DATA_URL <- "https://ckan0.cf.opendata.inter.prod-toronto.ca/download_resource/80e3b9b6-6c1a-49b3-a44b-a129683419ae"
+DATA_PATH <- "data/raw_data.csv"
+
+if (!file.exists(DATA_PATH)) {
+  raw_data <- read_csv(DATA_URL)
+  write.csv(raw_data, DATA_PATH)
+} else {
+  raw_data <- read.csv(DATA_PATH)
+}
+```
+
+```{r}
+# keep record of the columns we're keeping,
+# and ensure non-null values
+data <- raw_data |>
+  select(
+    STREETNAME,
+    WARD,
+    COMMON_NAME,
+    DBH_TRUNK
+  ) |>
+  drop_na()
+```
+
+```{r}
+#Add relevant columns one by one
+#First, clean up street names to remove secondary suffixes
+#using an ad-hoc list
+
+SUFFIXES_TO_REMOVE <- c(
+  "E", "W", "N", "S",        # directional
+  "TORONTO", "TO",           # geographical
+  "ETOBICOKE", "ET",
+  "NORTH YORK", "NY",
+  "EAST YORK", "EY",
+  "SCARBOROUGH",
+  "YORK", "YK"
+)
+
+pattern <- paste0(" (", paste(SUFFIXES_TO_REMOVE, collapse = "|"), ")$")
+
+stripSuffixes <- function(str) {
+  gsub(pattern, "", str)
+}
+
+cleanStreetName <- function (str){
+  str <- unlist(str_split(str, ","), FALSE, FALSE)[[1]]
+  str <- stripSuffixes(str)
+  str
+}
+
+cleanStreetName <- Vectorize(cleanStreetName)
+
+
+data <- data |>
+  mutate(
+    street_name = cleanStreetName(STREETNAME),
+    street_suffix = word(street_name, -1)
+  )
+```
+
+```{r}
+# Toronto geographical data
+DISTRICTS <- 1:25
+
+DISTRICTS[c(1, 2, 3, 5, 7)] <- "Etobicoke York"
+DISTRICTS[c(6, 8, 15, 16, 17, 18)] <- "North York"
+DISTRICTS[c(4, 9, 10, 11, 12, 13, 14, 19)] <- "Toronto East York"
+DISTRICTS[c(20:25)] <- "Scarborough"
+
+data <- data |> mutate(
+  district = DISTRICTS[WARD]
+)
+```
+
+```{r}
+# Tree and tree statistics
+
+data <- data |> rowwise() |>
+  mutate(
+  tree_family = unlist(str_split(COMMON_NAME, ','), FALSE, FALSE)[1]
+) |> ungroup()
+
+tree_stats <- tibble(
+  family = unique(data$tree_family)
+)
+```
+
+```{r}
+all_trees <- data$COMMON_NAME |> unique()
+tree_stats <- tree_stats |>  rowwise() |>
+  mutate(
+    subspecies = keep(all_trees, ~str_detect(., paste0(family, ", "))) |> list(),
+    n_subspecies = length(subspecies),
+    mean_diameter = data |> filter(tree_family == family) |> pull("DBH_TRUNK") |> mean(),
+    n_occurrences = data |> filter(tree_family == family) |> nrow(),
+  )  |> 
+  ungroup()
+```
+
+```{r}
+top_trees <- tree_stats |> top_n(n_occurrences, n = 10) |> pluck("family")
+
+temp <- data |> filter(tree_family %in% top_trees)
+```
+
+```{r}
+street_stats <- data |> group_by(street_suffix) |> count(name = "n_occurrences") |> ungroup()
+
+top_suffixes <- street_stats |> arrange(desc(n_occurrences)) |> head(10)
+```
+
