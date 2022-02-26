@@ -39,7 +39,7 @@ vignettes/*.pdf
 /cache/
 
 # heavy data
-data/*
+data/*.csv
 
 # Temporary files created by R markdown
 *.utf8.md
