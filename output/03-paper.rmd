@@ -16,8 +16,10 @@ bibliography: references.bib
 link-citations: true
 ---
 
-```{r setup, include=FALSE}
+```{r setup, echo=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+knitr::read_chunk('../01-setup.rmd')
+knitr::read_chunk('../02-graphs.rmd')
 ```
 
 ## Introduction
@@ -62,11 +64,13 @@ calentes Neptunus, deficit *circumvelatur*. Leve ab utraque nec petis et vocibus
 sagittas veteris in dicit si? Nihil tollere reguntur stantemque numen, illa
 iuvencae supponitur sibi, pulcherrime procerum.
 
+In addition to `knitr` [@knitr] for generating this paper, `knitr::kable` and `kableExtra` [@kableExtra] were indispensable for tabular formatting. And, of course, we are thoroughly indebted to @rohan's book and associated course, Telling Stories with Data for instruction on how to put all the parts together into a cogent paper.
+
 ## Data
 
 All data were analyzed using the R statistical programming language [@R]. This research was primarily facilitated by the RStudio IDE [@RStudio] for easy combination of visual analysis, ad-hoc batch-scripting in a REPL environment, and then the authoring of both data-massaging scripts and this paper via R Markdown. Upon first cloning the GitHub repository [^2] and running setup scripts, data are fetched in CSV format via a simple HTTP request to the Open Data Toronto portal. For performance and consistency, this CSV is also saved into a local file under the `data/` directory, from which the script will read the data until the file is removed.  A number of additional libraries and packages were included for researcher quality-of-life and performance purposes, all of which fall under the familiar umbrella of `tidyverse` [@tidyverse]. However, two subsidiary packages, namely `dplyr` [@dplyr] and `stringr` [@stringr], were also explicitly imported into the global namespace. Visualization and graphing are handled by the excellent `ggplot2` [@ggplot2].
 
-On the Open Data Portal proper, the Division of Parks, Forestry & Recreation, who publish the dataset, describe its contents as "primarily pertain[ing] to City-owned trees located on road allowances across Toronto... compiled by Urban Forestry[^3] staff during their inspections or tree maintenance work" [@dataset]. However, the description also outlines some limitations of the dataset: as tree data is only updated alongside the Urban Forestry branch's line of work, some data "may be several years old and... there may be inaccuracies with the data as a result." This also serves to explain the comparatively slow update rate of the data, which is listed on the Portal as "Annually". In light of these potential inaccuracies, we decided to focus on aspects of the data that were less subject to change, such as tree species, electoral district, and the streets on which they are planted, as opposed to the geographical data that was provided.
+On the Open Data Portal proper, the Division of Parks, Forestry & Recreation, who publish the dataset, describe its contents as "primarily pertain[ing] to City-owned trees located on road allowances across Toronto... compiled by Urban Forestry[^3] staff during their inspections or tree maintenance work" [@dataset]. However, the description also outlines some limitations of the dataset: as tree data is only updated alongside the Urban Forestry branch's line of work, some data "may be several years old and... there may be inaccuracies with the data as a result." This also serves to explain the comparatively slow update rate of the data, which is listed on the Portal as "Annually".
 
 Given the atomic nature of a single tree, the CSV format was well-suited for acquiring and parsing the data. Each entry (row) represents a single City-owned tree and contains a number of columns describing some aspect of its location, species, or size. Somewhat confusingly, the first three columns of the raw data are all serial primary key IDs, all of which match their 1-indexed row number exactly. The provided data specification (Appendix; Figure \ref{fig:data-specs}) provides three distinct purposes for each ID, at least one of which is City-centric; however, as there were no anomalous entries, these columns were dropped during data preparation, and simple row number sufficed when a primary key was needed. Ultimately, the four retained columns were as follows:
 
@@ -91,6 +95,12 @@ One note in regards to `tree_family` and subspecies: the Urban Forestry descript
 ```{r fig-data-specs, fig.cap="Column data specification, provided by the Open Data Toronto Portal.\\label{fig:data-specs}", fig.align="center", out.width="60%"}
 knitr::include_graphics('../res/img/data-spec.png')
 ```
+
+```{r}
+<<density-contour>>
+density_contour
+```
+
 
 \newpage
 ## References

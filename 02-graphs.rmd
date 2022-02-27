@@ -1,0 +1,138 @@
+---
+title: "02-graphs"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(kableExtra)
+```
+
+```{r}
+data |> ggplot(aes(tree_family, DBH_TRUNK)) +
+  labs(x="Tree Species", y="Tree diameter at breast height, cm") +
+  geom_jitter(aes(alpha=1/2, color = tree_family)) +
+  theme(legend.position="none",
+        axis.text.x = element_text(angle=45, vjust=.95, hjust=1)) +
+  ylim(0, 250) +
+  facet_wrap(~district)
+```
+```{r}
+data |>
+  select(district, street_suffix, tree_family) |>
+  filter(street_suffix %in% top_suffixes$street_suffix & tree_family %in% top_trees) |>
+  #merge(tree_stats, by.x = "tree_family", by.y = "family") |>
+  ggplot(aes(x = tree_family, y = street_suffix)) +
+  geom_bin2d() +
+  scale_fill_viridis_c() +
+  theme(axis.text.x = element_text(angle=45, vjust=.95, hjust=1)) +
+  facet_wrap (~district)
+```
+```{r}
+subheaders <- tree_stats |>
+  arrange(family)
+
+subheaders <- subheaders |>
+  pull("n_subspecies") |>
+  as.vector() |>
+  setNames(subheaders$family)
+  
+
+data |>
+  select(street_suffix, COMMON_NAME) |>
+  table() |>
+  knitr::kable(align = "c") |>
+  kable_classic(full_width = FALSE, html_font = "Cambria") |>
+  row_spec(0, angle=-45) |>
+  add_header_above(c(" ", subheaders))
+
+
+data |>
+  select(street_suffix, tree_family) |>
+  table() |>
+  knitr::kable(align = "c") |>
+  kable_classic(full_width = FALSE, html_font = "Cambria") |>
+  row_spec(0, angle=-45)
+```
+
+```{r}
+data |>
+  filter(tree_family == "Maple") |>
+  ggplot(aes(x = DBH_TRUNK, fill = COMMON_NAME)) +
+    geom_histogram(bins=40, na.rm = F) +
+  labs(title="Stacked histogram of maple tree subspecies in Toronto's communities by diameter", x="Diameter at breast height (cm)", y="Total occurrences") +
+    theme(legend.position="none",
+        axis.text.x = element_text(angle=45, vjust=.95, hjust=1)) +
+    scale_x_continuous(breaks=seq(0, 150, 15), limits=c(0, 150)) +
+    facet_wrap(~district)
+```
+
+```{r}
+
+makeHisto <- function(species, xmax = 150, legend.position = "none") {
+ data |>
+  filter(tree_family == species) |>
+  ggplot(aes(x = DBH_TRUNK, fill = COMMON_NAME)) +
+    geom_histogram(bins=40, na.rm = F) +
+  labs(
+    title=paste("Stacked histogram of", species, "tree subspecies in Toronto's communities by diameter"),
+    x="Diameter at breast height (cm)",
+    y="Total occurrences",
+    fill="Subspecies"
+    ) +
+    theme(legend.position=legend.position,
+        axis.text.x = element_text(angle=45, vjust=.95, hjust=1)) +
+    xlim(0, xmax) +
+    facet_wrap(~district) 
+}
+
+makeHisto("Willow", legend.position = "bottom")
+```
+
+```{r}
+points <- raw_data$geometry |>
+  str_extract_all("\\d+\\.\\d+")
+
+# from https://stackoverflow.com/a/32381792
+points <- do.call(rbind, points) |> cbind(DISTRICTS[raw_data$WARD]) |> as.data.frame()
+colnames(points) <- c("longitude","latitude", "district")
+points$longitude <- as.numeric(points$longitude)
+points$latitude <- as.numeric(points$latitude)
+
+# dot_map <- points |>
+#   sample_frac(1/20)
+#   ggplot(aes(x = longitude, y = latitude, colour=district, alpha=.1)) +
+#   geom_point()
+# 
+# dot_map
+
+```
+
+```{r density-contour}
+density_contour <- points |>
+  drop_na() |>
+  #slice_sample(prop = 1/3) |>
+  ggplot(aes(x = -longitude, y = latitude, colour = district)) +
+  labs(
+    title = "Tree density contour map of Toronto",
+    x = "Longitude",
+    y = "Latitude",
+    colour = "Ward"
+  ) +
+  geom_point() +
+  geom_density_2d(colour = "black", adjust=2/3) #+
+  #facet_wrap(~district)
+```
+
+```{r}
+data |>
+  with_groups(tree_family, mutate,
+              subspecies = COMMON_NAME |> unique() |> list(),
+              n_subspecies = subspecies[[1]] |> length(),
+              mean_diameter = mean(DBH_TRUNK),
+              n_occurrences = n()
+  ) |>
+  select(tree_family, subspecies, n_subspecies, mean_diameter) |>
+  distinct()
+```
+
