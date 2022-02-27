@@ -12,83 +12,167 @@ output:
   bookdown::pdf_document2:
     toc: true
     number_sections: false
+    fig_crop: false
+    extra_dependencies: ["flafter"]
 bibliography: references.bib
 link-citations: true
 ---
 
 ```{r setup, echo=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
-knitr::read_chunk('../01-setup.rmd')
-knitr::read_chunk('../02-graphs.rmd')
+knitr::opts_chunk$set(echo = FALSE, out.width = "80%", out.align="center")
+options(knitr.graphics.error = FALSE)
 ```
 
+```{r libraries, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(kableExtra)
+```
+
+```{r source, cache=TRUE, include=FALSE}
+source('01-setup.R', local = knitr::knit_global())
+```
+
+\newpage
 ## Introduction
-[TODO]
-Lorem markdownum nocuisse attonitos spectarat, et caede aut *limine iussit*
-intrare carinae tumulandus bracchia cavo cum olivae sede. **Voces Lydas
-communis** ignara subvolat quoque: annis Antiphatae tenet!
+> Welcome to our house on Maple Avenue  
+  See how we polish and we shine  
+  We rearrange and realign  
+  Everything is quiet and serene,  
+  Like chaos never happens if it's never seen  
+    
+  -- <cite>_Fun Home_, Jeanine Tesori & Lisa Kron</cite>
 
-1. Recepi eat usque linguisque qua nescia leges
-2. Mihi arces circumtulit pocula cedit et ter
-3. Sono Iunonem Autonoe
+The essence of Data Science is eliciting the illusion of order out of chaos. As character Alison Bechdel sings in _Fun Home_, perhaps we can convince ourselves that the chaos of raw data 'never happens', so long as it is never seen. In this paper, we seek to bring some order to a catalogue of municipally-owned trees in the City of Toronto, as provided from Urban Forestry in the Open Data Toronto portal, by applying some elementary statistical and visual analysis [@dataset]. In this paper, we analyze this catalogue from a variety of perspectives -- geographical, political, and dendrological -- to discover the stories hidden in Toronto's trees. First, we analyze the map coordinates of the trees to determine their relative density, as well as investigate those parts of Toronto where no City-owned trees grow. Second, we arrange the data by species and subspecies of tree and conduct a comparative analysis across the major electoral boroughs which constitute the modern megacity. In so doing, we unveil a small portion of Toronto's ongoing efforts to expand and beautify its foliage, but also encounter some biases and shortcomings hiding in between the lines. Finally, we cross-reference the various types of Toronto's road affordances -- streets, roads, etc. -- with species of tree, uncovering a conclusion that is equal parts unsurprising and surprising.
 
-Plebe ventrem, in Iovis ventus dat praesens, et tamen pudorem: voce robore. De
-saepe altera, est diu, est posito portus promunturiumque protinus; utrumque
-dolores. Harundine iamque, odio, est, loco, teque, aether [opus
-cycnorum](http://www.satis.io/suus), sua bellum, sum. Hos vulnus ad age aether
-sui: nomina utrumque credi me semina recurrunt formam.
-
-Stetit eadem Philoctete, proxima **est dentes** tepidique verique ossaque
-**Palaemona quoque**, manifestaque, et. Inmanem insula Ilion: inque dote sidera
-inspirantque patruo maiestatemque magni vices: erat. Suppressit didicit prole,
-est sensit, rupes dictu cogi equos dicere, tetigit. Fuisse deploratosque sponte
-[et](http://www.aiturbe.net/usus-cum.html) caelo quamvis.
-
-Aqua fugiant redditur armenta atque parentem prece vix tua ausi! Quo euntis opes
-nymphas simulat suis. Vacuos [quod](http://www.nihil-at.org/eligit-tua.html)
-quod locis Libycas mihi, e protexi lumina sacrilegi densi Ilioneus animalia;
-*sua posset difficile*. Timide unus Phoebi suscitat.
-
-- Neu modo bello si credite
-- Fatemur mirer exstinctum Hymettia conclamat veterem orba
-- Sic mero mors ore fore aliud primosque
-- Pectora suo ceras indoluit
-- Praeda sumptaque remansit postquam postquam postquam dedit
-
-Telique dolore; vidit undas; rudis barbarus vestras murice **vestras**.
-**Virorum** evocat.
-
-**Lapsu praeceps rapta** puerilibus [surgit](http://nigra-agitatis.net/a.html),
-tellus illa aderam vixisse non. Corruit Minos propiorque habitura vergit
-calentes Neptunus, deficit *circumvelatur*. Leve ab utraque nec petis et vocibus
-sagittas veteris in dicit si? Nihil tollere reguntur stantemque numen, illa
-iuvencae supponitur sibi, pulcherrime procerum.
-
-In addition to `knitr` [@knitr] for generating this paper, `knitr::kable` and `kableExtra` [@kableExtra] were indispensable for tabular formatting. And, of course, we are thoroughly indebted to @rohan's book and associated course, Telling Stories with Data for instruction on how to put all the parts together into a cogent paper.
+We are thoroughly indebted to @rohan's book and associated course, Telling Stories with Data, for instruction on how to put all the parts of Data Science together into a cogent paper.
 
 ## Data
 
 All data were analyzed using the R statistical programming language [@R]. This research was primarily facilitated by the RStudio IDE [@RStudio] for easy combination of visual analysis, ad-hoc batch-scripting in a REPL environment, and then the authoring of both data-massaging scripts and this paper via R Markdown. Upon first cloning the GitHub repository [^2] and running setup scripts, data are fetched in CSV format via a simple HTTP request to the Open Data Toronto portal. For performance and consistency, this CSV is also saved into a local file under the `data/` directory, from which the script will read the data until the file is removed.  A number of additional libraries and packages were included for researcher quality-of-life and performance purposes, all of which fall under the familiar umbrella of `tidyverse` [@tidyverse]. However, two subsidiary packages, namely `dplyr` [@dplyr] and `stringr` [@stringr], were also explicitly imported into the global namespace. Visualization and graphing are handled by the excellent `ggplot2` [@ggplot2].
 
-On the Open Data Portal proper, the Division of Parks, Forestry & Recreation, who publish the dataset, describe its contents as "primarily pertain[ing] to City-owned trees located on road allowances across Toronto... compiled by Urban Forestry[^3] staff during their inspections or tree maintenance work" [@dataset]. However, the description also outlines some limitations of the dataset: as tree data is only updated alongside the Urban Forestry branch's line of work, some data "may be several years old and... there may be inaccuracies with the data as a result." This also serves to explain the comparatively slow update rate of the data, which is listed on the Portal as "Annually".
+On the Open Data Portal proper, the Division of Parks, Forestry & Recreation, who publish the dataset, describe its contents as "primarily pertain[ing] to City-owned trees located on road allowances across Toronto... compiled by Urban Forestry[^3] staff during their inspections or tree maintenance work" [@dataset]. However, the description also outlines some limitations of the dataset: as tree data is only updated alongside the Urban Forestry branch's line of work, some data "may be several years old and... there may be inaccuracies with the data as a result." Given trees' propensity to grow, this means that certain measurements, such as DBH, may skew on the low side. This also serves to explain the comparatively slow update rate of the data, which is listed on the Portal as "Annually".
 
-Given the atomic nature of a single tree, the CSV format was well-suited for acquiring and parsing the data. Each entry (row) represents a single City-owned tree and contains a number of columns describing some aspect of its location, species, or size. Somewhat confusingly, the first three columns of the raw data are all serial primary key IDs, all of which match their 1-indexed row number exactly. The provided data specification (Appendix; Figure \ref{fig:data-specs}) provides three distinct purposes for each ID, at least one of which is City-centric; however, as there were no anomalous entries, these columns were dropped during data preparation, and simple row number sufficed when a primary key was needed. Ultimately, the four retained columns were as follows:
+The atomic nature of a single tree makes the CSV format well-suited for acquiring and parsing the data. Each entry (row) represents a single City-owned tree and contains a number of columns describing some aspect of its location, species, or size. Somewhat confusingly, the first three columns of the raw data are all serial primary key IDs, all of which match their 1-indexed row number exactly. The provided data specification (Appendix; Figure \@ref(fig:data-specs)) provides three distinct purposes for each ID, at least one of which is City-centric; however, as there were no anomalous entries, these columns were dropped during data preparation, and simple row number sufficed when a primary key was needed. Ultimately, only two columns were retained in their initial format:
 
-1. `STREETNAME`: The street along which the tree was planted;
-2. `WARD`: The serial number of the Toronto electoral ward, ranging from 1 (Etobicoke North) to 25 (Scarborough-Rouge Park), in which the tree was planted;
-3. `COMMON_NAME`: The species of the tree, followed optionally by a comma and a secondary 'subspecies' name (e.g., 'Maple' or 'Maple, Norway');
-4. `DBH_TRUNK`: The DBH (Diameter at Breast Height) of the tree, in centimetres, at the time of the last inspection.
+1. `COMMON_NAME`: The English species of the tree, followed optionally by a comma and a secondary 'subspecies' name (e.g., 'Maple' or 'Maple, Norway');
+2. `DBH_TRUNK`: The Diameter at Breast Height of the tree's trunk at last inspection, measured in centimetres to integral precision.
 
-From these initial columns, four additional columns were computed for various purposes:
+Three further columns were used for computation and then discarded:
 
-1. `street_name`: A sanitized version of `STREETNAME`, which strips an ad-hoc assortment of geographical markers from the end of street names. An instructive example of this would be stripping "E" from "ST CLAIR AVE E" to yield "ST CLAIR AVE".
-2. `street_suffix`: The road affordance suffix: "AVE", "ST", "PK", etc. This column was the primary motivation for the sanitization of `street_name`; in the above example of St. Clair, this value would be "AVE" rather than "E".
-3. `district`: The Community Council Area[^4] in which `WARD` resides, one of four. "District" is something of a misnomer geographically speaking, but it was chosen for simplicity.
-4. `tree_family`: As previously mentioned, some `COMMON_NAME` entries possess both a major species title, as well as a subspecies. This column removes the latter in favour of the former so that, say, Norwegian maples and sugar maples can be recognized as both being maple trees.
+3. `STREETNAME`: The name of the road affordance ('street') along which the tree is planted;
+4. `WARD`: The municipal electoral ward in which the tree is planted, identified by a number from 1 (Etobicoke North) to 25 (Scarborough-Rouge Park);
+5. `geometry`: A JSON object containing the longitude and latitude of the tree, measured to five decimal places.
 
-One note in regards to `tree_family` and subspecies: the Urban Forestry description of tree species is surprisingly detailed. Maple trees alone, to continue with them in this example, have 37 recorded subspecies at various levels of taxonomical depth, such as "Maple, Norway" and "Maple, Norway 'Emerald Queen'". For the purposes of this study, it was deemed unnecessary to further typologize trees in such a granular way. Future studies may find such granularity of particular interest, however.
 
+From these initial columns, six additional columns were computed for various purposes, resulting in a final total of 8:
+
+6. `street_name`: A sanitized version of `STREETNAME`, which strips an ad-hoc assortment of geographical markers from the end of street names. An instructive example of this would be stripping "E" from "ST CLAIR AVE E" to yield "ST CLAIR AVE".
+7. `street_suffix`: The road affordance suffix: "AVE", "ST", "PK", etc. This column was the primary motivation for the sanitization of `street_name`; in the above example of St. Clair, this value would be "AVE" rather than "E".
+8. `district`: The Community Council Area[^4] in which `WARD` resides, one of four. "District" is something of a misnomer geopolitically speaking, but it was chosen for simplicity.
+9. `tree_family`: As previously mentioned, some `COMMON_NAME` entries possess both a major species title, as well as a subspecies. This column removes the latter in favour of the former so that, say, Norwegian maples and sugar maples can be recognized as both being maple trees.
+10. `longitude`: A parsed version of the longitude from `geometry`.
+11. `latitude`: Similar.
+
+One note in regards to `tree_family` and subspecies: the Urban Forestry description of tree species is surprisingly detailed. Maple trees alone, to continue with them in this example, have 37 recorded subspecies at various levels of taxonomical depth, such as "Maple, Norway" and "Maple, Norway 'Emerald Queen'", excluding the basal form of "Maple". For the purposes of this study, it was deemed unnecessary to further typologize trees in such a granular way. Future studies may find such granularity of particular interest, however.
+
+\newpage
 ## Discussion
+### Geography and Density
+With the data now ready for use, we tried to identify if any biases in the data existed, which would need to be accounted for in successive analysis. However, even a somewhat sparse sample -- just 20% of the data are shown below in Figure \@ref(fig:density-contour) -- provided a strikingly representative view of the City of Toronto:
+
+```{r density-contour, fig.cap="Tree density contour map of Toronto. \\label{fig:density-contour}", fig.align='center'}
+data |>
+  slice_sample(prop = 1/5) |>
+  ggplot(aes(x = - longitude, y = latitude, colour = district)) +
+  geom_point() +
+  labs(
+    x = "Longitude (W)",
+    y = "Latitude (N)",
+    colour = "District"
+  ) +
+  geom_density_2d(colour = "#00000040", adjust=2/3)
+```
+Of particular delight is the small cluster of points, jutting out due south of Toronto East York; just a few trees' worth of data was sufficient to draw a crude outline of the Harbourfront, including Queen's Quay and the Toronto Islands. Contour lines were drawn to represent not altitude, but density of points: notice, for example, how multiple densely-packed lines delineate the synthetic lowlands south of Front Street from the typical density of Toronto East York's foliage.
+
+Sparse areas, shown above in grey, typically seem to follow natural watersheds, e.g., what appears to be the Don Valley separating Toronto East York and North York along their eastern border. In general, the contour lines wrap around these zones, indicating a steep drop-off in density in these areas. However, the large 'dead zone' in the northwest end of North York, centred at approximately 43°75'N 79°48W, revealed something more surprising: entering the coordinates into a computerized map system yields an area surrounding Downsview Airport, a military airport, and the nearby Downsview Park. Further research reveals that the land is owned not municipally, but federally[^5], explaining the dearth of municipal tree data in the area despite the plenitude of trees. Data also fall off significantly along the northeast edge of Scarborough, towards the large Rouge National Urban Park; if the use of *National* in the name is anything to go off of, this is a similar scenario to that of Downsview.
+
+### Tree Species
+With an increased confidence that our data are well representative of the different geographical regions of Toronto, we can turn our attention to examining the distribution of the trees themselves. Figure \@ref(fig:maple-histo) below depicts the frequencies of given DBH across the 38 varieties of Maple trees:
+
+```{r fig-maple-histo, fig.cap="\\label{fig:maple-histo} Maples exhibit a wide variety of diameters across Toronto's Community Council Areas."}
+
+makeHisto <- function(species, xmax = 150, legend.position = "none") {
+ data |>
+  filter(tree_family == species) |>
+  ggplot(aes(x = DBH_TRUNK, fill = COMMON_NAME)) +
+    geom_histogram(bins=40, na.rm = T) +
+    geom_vline(aes(xintercept = mean(DBH_TRUNK)), color="red", linetype="dotted") +
+  labs(
+    title=paste("Stacked histogram of", species, "tree subspecies in Toronto's communities by diameter"),
+    x="Diameter at breast height (cm)",
+    y="Total occurrences",
+    fill="Subspecies"
+    ) +
+    theme(legend.position=legend.position,
+        axis.text.x = element_text(angle=45, vjust=.95, hjust=1)) +
+    xlim(0, xmax) +
+    facet_wrap(~district) 
+}
+
+makeHisto("Maple")
+```
+
+Note that the legend was omitted from this figure due to the overwhelming number of different varieties, which would have impacted visibility. We draw your attention, however, to the bright green stratum in each graph. The respective subspecies, "Maple, Norway", constitutes the plurality of maples across each district, particularly in Etobicoke York. The red dashed line denotes the mean DBH, here illustrating a steady decline in frequency of diameters above the mean. It would be particularly interesting to correlate these diameters to planting date, were such data available: The extremely high count of maples in Scarborough with small diameters seems to indicate a high proportion of young trees, which will later grow and increase in diameter toward the mean.
+
+Spruce trees, as depicted below in Figure \@ref(fig:spruce-histo), tell another interesting story. Immediately, one is struck by the relative dearth of spruces in Scarborough, especially as compared to North York. This appears to be indicative of Scarborough's relative youth as a part of Toronto's urban core, along with ongoing efforts by the City to prepare the area for future urban spread, through planting trees in public spaces. Again, one variety -- Colorado blue spruces -- make up the plurality of the trees citywide, and we also notice a strange peaking effect around various tick marks. An ad-hoc script analysis reveals that approximately 47% of spruce trees diameters are a multiple of 5, rather than the 20% we would expect from a truly uniform distribution. This may unveil an unintended bias induced by Urban Forestry inspectors: the human tendency to round rough measurements to neater values. Similarly, future investigations may be interested by the prevalence of one subspecies above others in many species, such as the Colorado blue spruce or Norway maple, particularly from an ecological perspective: monocropping and other low-ecodiversity practices have been known to have adverse long-term effects on soil and the viability of land for food production.
+
+
+```{r fig-spruce-histo, fig.cap="\\label{fig:spruce-histo} Spruces possess fewer subspecies than maples, making analyzing the proportions of different varieties more feasible."}
+makeHisto("Spruce", legend.position = "bottom", xmax = 75)
+```
+
+### Street Suffixes
+The following figures, in some sense, were the motivating visualizations of this paper. Figures \@ref(fig:maple-frequency) and \@ref(fig:no-maple-freq), below, depict a proportional contingency matrix between the species of a planted tree and the suffix of the road affordance on which it is planted. Although the prevalence of maple trees -- and avenues, for that matter -- is well-known to anyone who has spent any amount of time in Toronto, it was surprising to see just how frequently the two intersected in City-owned trees. Indeed, Figure \@ref(fig:no-maple-freq) was produced out of something akin to necessity, just to see if any other correlative effects could be seen without the overwhelming influence of Maple/Avenue.
+
+```{r fig-maple-frequency, fig.cap="\\label{fig:maple-frequency} The most common combination of tree species and street suffix in Toronto, overwhelmingly, is a maple tree on an avenue."}
+suffixes_by_frequency <- data$street_suffix |> table() |> sort(decreasing = TRUE) |> names()
+families_by_frequency    <- data$tree_family   |> table() |> sort(decreasing = TRUE) |> names()
+
+makeFreq <- function(top_suffixes, top_trees, title) {
+  data |>
+  filter(street_suffix %in% top_suffixes & tree_family %in% top_trees) |>
+  ggplot(aes(x = fct_infreq(tree_family), y = fct_infreq(street_suffix), fill = after_stat(count / max(count)))) +
+  labs(
+    title = str_wrap(title, 60),
+    x = "Tree species",
+    y = "Street suffix",
+    fill = "Proportional frequency [0, 1]"
+  ) +
+  geom_bin_2d() +
+  scale_fill_viridis_c(option="plasma") +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      vjust = .75
+    )
+  )
+}
+
+makeFreq(suffixes_by_frequency[1:15], families_by_frequency[1:15],
+         title = "Proportional frequency of City-owned trees, by species and street suffix"
+         )
+```
+
+
+
+```{r no-maple-freq, fig.cap="\\label{fig:no-maple-freq} Without maples and avenues, the next-most-common intersection is Honey locust trees on roads. However, a greater distribution of proportional frequencies is visible."}
+makeFreq(suffixes_by_frequency[2:16], families_by_frequency[2:16],
+         title = "Proportional frequency of City-owned trees, by species and street suffix (excluding Maples and avenues)"
+         )
+```
+
+Trimming away the dominant axes in this way opens up the proportional frequency visible in the colour scheme: although Figure \@ref(fig:maple-frequency) makes it seem as though roads (RD) hardly contain trees, we can now see that a wide variety of trees grow on them, from Honey locusts to Serviceberrys. That being said, one can also see that there is a significant top-heavy effect in frequency: after the fifth most-common street suffix, the relative proportions are low enough that differences between given intersections cannot be discerned with the naked eye. Similarly, the relative frequency of tree species less popular than Elms, on any type of road affordance, tapers off quickly.
 
 \newpage
 ## Appendix
@@ -96,9 +180,17 @@ One note in regards to `tree_family` and subspecies: the Urban Forestry descript
 knitr::include_graphics('../res/img/data-spec.png')
 ```
 
-```{r}
-<<density-contour>>
-density_contour
+
+```{r fig-frequency-table, fig.align="left", out.height=11, include=FALSE}
+# If you're interested in seeing a full frequency table, use the
+# code below.
+data |>
+  select(street_suffix, tree_family) |>
+  table() |>
+  knitr::kable(align = "c") |>
+  kable_classic(full_width = FALSE) |>
+  kable_styling(latex_options="scale_down") |>
+  row_spec(0, angle=-90)
 ```
 
 
@@ -111,3 +203,4 @@ density_contour
 [^2]: Data and code can be found at https://github.com/oliver-daniel/inf_313-paper_1.
 [^3]: A branch of Parks, Forestry & Recreation.
 [^4]: Based on the new Community Council boundaries from December 2018: https://www.toronto.ca/city-government/data-research-maps/neighbourhoods-communities/community-council-area-profiles/
+[^5]: https://en.downsviewpark.ca/park > "Past, Present and Future of the Park"

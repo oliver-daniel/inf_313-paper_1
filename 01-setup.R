@@ -108,5 +108,6 @@ tree_stats <- data |>                      # statistics about tree species
   select(tree_family, subspecies, n_subspecies, mean_diameter, n_occurrences) |>
   distinct()
 
-
+#### Cleanup ####
+rm(raw_data)
                          
