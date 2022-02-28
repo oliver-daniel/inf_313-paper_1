@@ -109,7 +109,7 @@ makeHisto <- function(species, xmax = 150, legend.position = "none") {
     geom_histogram(bins=40, na.rm = T) +
     geom_vline(aes(xintercept = mean(DBH_TRUNK)), color="red", linetype="dotted") +
   labs(
-    title=paste("Stacked histogram of", species, "tree subspecies in Toronto's communities by diameter"),
+    title=paste("Stacked histogram of", species, "tree subspecies in Toronto's communities by diameter") |> str_wrap(60),
     x="Diameter at breast height (cm)",
     y="Total occurrences",
     fill="Subspecies"
